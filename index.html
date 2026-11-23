@@ -445,6 +445,7 @@ dialog .row{display:flex;justify-content:space-between;align-items:center;gap:10
       <li>Al final de cada bolilla hay <b>casos de examen</b> con cuatro opciones, como el parcial, y una <b>tabla de datos para memorizar</b> con modo repaso.</li>
       <li>Donde aparece el recuadro <b>En clase</b> está el fragmento de la grabación sobre ese tema. El ícono de auriculares en el menú muestra cuántos hay por bolilla, y <b>Audios de clase</b> los junta todos con filtros. La etiqueta <b>Se toma en examen</b> marca lo que en clase se dijo que se pregunta.</li>
       <li>Para practicar, usá el <b>Simulacro de parcial</b> (30 preguntas al azar corregidas con la escala del programa), <b>No confundir</b> (los pares de conceptos que más se prestan a trampa) y el <b>Mapa de autores</b>.</li>
+      <li><b>Voz más natural:</b> la lectura en voz alta usa las voces del navegador. En <b>Microsoft Edge</b> (gratis, también para Mac) aparecen voces neuronales argentinas: elegí <b>★ Microsoft Tomas</b> o <b>★ Microsoft Elena Online (Natural), Spanish (Argentina)</b> en el selector de voz del reproductor. Las voces con ★ son las naturales y quedan primeras.</li>
       <li>Con <b>Letra</b>, arriba del índice (o <b>Aa</b> en el celular), agrandás el texto; la elección queda guardada.</li>
       <li>Para producir los audios como archivo, usá <b>Copiar guion</b> y pegalo en el lector de voz que prefieras.</li>
     </ol>
@@ -2026,14 +2027,16 @@ const PLAY = 'M6 4l10 6-10 6z', PAUSE = 'M5 4h4v12H5zM11 4h4v12h-4z';
 function loadVoices(){
   if (!synth) return;
   const all = synth.getVoices(); voices = all.filter(v => /^es/i.test(v.lang));
-  const pref = ['es-AR','es-419','es-US','es-MX','es-CL','es-CO','es-UY','es-ES'];
-  voices.sort((a,b) => { const ia = pref.findIndex(p => a.lang.replace('_','-').startsWith(p)), ib = pref.findIndex(p => b.lang.replace('_','-').startsWith(p));
-    return (ia<0?99:ia) - (ib<0?99:ib); });
+  const pref = ['es-AR','es-UY','es-419','es-US','es-MX','es-CL','es-CO','es-ES'];
+  const NAT = /natural|neural|online|premium|enhanced|mejorada|siri/i;
+  const score = v => { const r = pref.findIndex(p => v.lang.replace('_','-').startsWith(p)); return (NAT.test(v.name) ? 0 : 100) + (r < 0 ? 99 : r); };
+  voices.sort((a,b) => score(a) - score(b));
   const saved = (()=>{ try { return localStorage.getItem('etica-voice'); } catch(e){ return null; } })();
-  voiceSel.innerHTML = '<option value="">Voz automática</option>' + voices.map((v,i) => '<option value="'+i+'">'+v.name.replace(/[<>&"]/g,'')+' ('+v.lang+')</option>').join('');
+  voiceSel.innerHTML = '<option value="">Voz automática</option>' + voices.map((v,i) => '<option value="'+i+'">'+(NAT.test(v.name) ? '★ ' : '')+v.name.replace(/[<>&"]/g,'')+' ('+v.lang+')</option>').join('');
   let i = voices.findIndex(v => v.name === saved); if (i < 0 && voices.length) i = 0;
   if (i >= 0){ voiceSel.value = String(i); voice = voices[i]; }
   if (!voices.length) plSub.textContent = 'No hay voces en castellano instaladas: se usa la voz por defecto';
+  else if (!voices.some(v => NAT.test(v.name))) plSub.textContent = 'Para una voz argentina natural, abrí la guía en Microsoft Edge';
 }
 if (synth){ loadVoices(); if ('onvoiceschanged' in synth) synth.onvoiceschanged = loadVoices; }
 else { [plPlay].forEach(b => b.disabled = true); $$('.btn-say,.btn-say-all').forEach(b => { b.disabled = true; b.title = 'Este navegador no tiene voz sintetizada'; });
